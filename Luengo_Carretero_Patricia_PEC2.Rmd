@@ -1,0 +1,183 @@
+---
+title: "Visualización de datos"
+author: "Patricia Luengo Carretero"
+date: "14/11/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+if (!require('dplyr')) install.packages('dplyr');
+library(dplyr)
+
+if (!require('vcd')) install.packages('vcd');
+library(vcd)
+
+if (!require('sf')) install.packages('sf');
+library(sf)
+
+if (!require('mapSpain')) install.packages('mapSpain');
+library(mapSpain)
+
+if (!require('ggplot2')) install.packages('ggplot2');
+library(ggplot2)
+```
+
+## Marimekko Diagram (Mosaic Plot)
+
+**Los gráficos de mosaico o diagramas de Marimekko** son usados para mostrar la relación entre dos variables discretas, ya sean factores o cadenas de texto.
+
+Este tipo de grafico recibe su nombre porque consiste en una cuadricula, en la que cada rectángulo representa el numero de casos que corresponden a un cruce específico de variables. Entre más casos se encuentren en ese cruce, más grande será el rectángulo.
+
+
+### Conjunto de datos
+
+El dataset se ha obtenido de kaggle en el siguiente [enlace](https://www.kaggle.com/datasets/joebeachcapital/students-performance/) y contiene datos del desempeño de los estudiantes al finalizar el año académico. Contiene 145 muestras y 33 atributos.
+
+```{r}
+library(readr)
+StudentsPerformance <- read_csv("C:/Users/patri/OneDrive/Documentos/MEGAsync/Ciencia de Datos Master/3 Visualización de datos/PEC2/data/StudentsPerformance.csv")
+head(StudentsPerformance)
+```
+
+Vamos a fijarnos en los siguientes atributos:
+-**Sex:** (1: femenino, 2: masculino)  
+-**Graduated high-school type:** (1: privada, 2: estatal, 3: otra)
+-**Additional Work**: (1: Si, 2: No)
+
+```{r}
+students <- select(StudentsPerformance, Sex, 'Graduated high-school type', 'Additional work')
+colnames(students)[1] <-"sex"
+colnames(students)[2] <-"graduated"
+colnames(students)[3] <-"work"
+head(students)
+```
+
+Modificamos los datos categóricos de rango numérico a etiquetas más legibles:
+
+**sex**
+
+```{r}
+students <- students %>% 
+  mutate(sex = case_when(
+    (sex == 1) ~ 'female',
+    (sex == 2) ~ 'male'))
+head(students$sex)
+```
+**graduated**
+
+```{r}
+students <- students %>% 
+  mutate(graduated = case_when(
+    (graduated == 1) ~ 'private',
+    (graduated == 2) ~ 'state',
+    (graduated == 3) ~ 'other'))
+head(students$graduated)
+```
+
+**work**
+
+```{r}
+students <- students %>% 
+  mutate(work = case_when(
+    (work == 1) ~ 'Yes',
+    (work == 2) ~ 'No'))
+head(students$work)
+```
+**Dos variables**
+
+```{r}
+mosaic( ~ sex + graduated, data = students,
+       highlighting = "sex", highlighting_fill = c("pink", "lightblue"),
+       direction = c("h", "v"))
+```
+
+
+**Conclusion**
+
+Observamos que los hombres en su mayoria se han graduado un universidades estatales.
+
+**Tres variables**
+
+```{r}
+mosaic( ~ sex + graduated + work, data = students,
+       highlighting = "sex", highlighting_fill = c("pink", "lightblue"),
+       direction = c("h", "v", "v"))
+```
+
+
+**Conclusion**
+
+La mayor parte de los hombres que se graduaron en universidades estatales no trabajaban.
+
+
+
+
+## Choropleth Map
+
+Choropleth Map proporcionan una manera fácil de visualizar cómo varía una variable en un área geográfica o muestran el nivel de variabilidad dentro de una región. La diferencia con un mapa de calor es que en un Choropleth Map utiliza las regiones dibujadas según el patrón de la variable.
+
+
+
+### Conjunto de datos
+
+El dataset se ha obtenido de kaggle en el siguiente [enlace](https://www.kaggle.com/datasets/josepblasco/hidro-data) y contiene datos de las precipitaciones por provincia en España en los útimos años, en concreto, nosotros hemos seleccionado los del año 2021.
+
+
+```{r}
+library(readr)
+precipitaciones <- read_delim("C:/Users/patri/OneDrive/Documentos/MEGAsync/Ciencia de Datos Master/3 Visualización de datos/PEC2/data/precipitaciones.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+head(precipitaciones)
+```
+
+```{r}
+library(mapSpain)
+library(sf)
+
+codelist <- mapSpain::esp_codelist
+
+prep <- unique(merge(precipitaciones, codelist[, c("cpro", "codauto")], all.x = TRUE))
+
+prov <- esp_get_prov()
+prov_sf <- merge(prov, prep)
+
+ggplot(prov_sf) +
+  geom_sf(aes(fill = anual),
+    color = "grey70",
+    linewidth = .3
+  ) +
+  scale_fill_gradientn(
+    colors = hcl.colors(10, "Blues", rev = TRUE),
+    n.breaks = 10,
+    guide = guide_legend(title = "Precipitaciones")
+  ) +
+  theme_void() +
+  theme(legend.position = c(0.1, 0.6))
+```
+
+**Conclusion**
+
+Como era de esperar la mayor cantidad de precipitaciones en el acumulado anual se producen en el Norte de España.
+
+
+## Histograms
+
+Su origen se debió al matemático Karl Pearson en 1895. Se utiliza para representar variables cuantitativas continuas y lo que suele hacerse es realizar una agrupación por franjas.
+
+### Conjunto de datos
+
+Utilizamos un dataset que contiene datos relacionados con vehículos, por ejemplo cilindrada, consumo, etc.
+
+```{r}
+mtcars
+```
+
+
+```{r}
+hist(mtcars$mpg,main="Distribución de vehículos según su consumo",breaks=15,xlab="Consumo",ylab="Vehículos", xlim=c(5,40))
+```
+
+**Conlusión**
+
+Vemos que hay una gran cantidad de vehículos cuyo consumo se encuentra entre 14 y 22 galones/milla.
+
